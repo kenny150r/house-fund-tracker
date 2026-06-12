@@ -12,7 +12,7 @@ import {
 import { useData } from "../context/DataContext";
 import { runProjection } from "../lib/projection";
 import { PageHeader, StatCard, Slider } from "../components/ui";
-import { compactCurrency, currency, formatDate, percent } from "../lib/format";
+import { compactCurrency, currency, formatDate, percent, yearTicks } from "../lib/format";
 import { ZERO_SCENARIO, type DataSnapshot, type ScenarioOverrides } from "../lib/types";
 
 export default function Scenarios() {
@@ -177,7 +177,9 @@ export default function Scenarios() {
                   type="number"
                   domain={["dataMin", "dataMax"]}
                   scale="time"
-                  tickFormatter={(t) => formatDate(new Date(t).toISOString()).slice(-4)}
+                  ticks={yearTicks(chartData.map((d) => d.date))}
+                  interval={0}
+                  tickFormatter={(t) => String(new Date(t).getFullYear())}
                   tick={{ fontSize: 11 }}
                 />
                 <YAxis tickFormatter={(v) => compactCurrency(v)} tick={{ fontSize: 11 }} width={56} />

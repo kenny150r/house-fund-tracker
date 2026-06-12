@@ -39,6 +39,21 @@ export function formatDate(iso: string): string {
   });
 }
 
+// One tick timestamp per distinct calendar year, so time-axis labels don't
+// repeat the same year across multiple monthly data points.
+export function yearTicks(timestamps: number[]): number[] {
+  const seen = new Set<number>();
+  const ticks: number[] = [];
+  for (const t of timestamps) {
+    const y = new Date(t).getFullYear();
+    if (!seen.has(y)) {
+      seen.add(y);
+      ticks.push(t);
+    }
+  }
+  return ticks;
+}
+
 // Convert an expense to its monthly-equivalent dollar cost.
 export function toMonthly(amount: number, cadence: string): number {
   switch (cadence) {

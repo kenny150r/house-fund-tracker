@@ -14,7 +14,7 @@ import {
 import { useData } from "../context/DataContext";
 import { useProjection } from "../hooks/useProjection";
 import { PageHeader, StatCard, EmptyState } from "../components/ui";
-import { compactCurrency, currency, formatDate, percent } from "../lib/format";
+import { compactCurrency, currency, formatDate, percent, yearTicks } from "../lib/format";
 
 export default function Dashboard() {
   const { snapshot, assumptions, market, seedStarterData, holdings } = useData();
@@ -118,7 +118,9 @@ export default function Dashboard() {
                 type="number"
                 domain={["dataMin", "dataMax"]}
                 scale="time"
-                tickFormatter={(t) => formatDate(new Date(t).toISOString()).slice(-4)}
+                ticks={yearTicks(chartData.map((d) => d.date))}
+                interval={0}
+                tickFormatter={(t) => String(new Date(t).getFullYear())}
                 tick={{ fontSize: 11 }}
               />
               <YAxis
@@ -160,7 +162,9 @@ export default function Dashboard() {
                 type="number"
                 domain={["dataMin", "dataMax"]}
                 scale="time"
-                tickFormatter={(t) => formatDate(new Date(t).toISOString()).slice(-4)}
+                ticks={yearTicks(chartData.map((d) => d.date))}
+                interval={0}
+                tickFormatter={(t) => String(new Date(t).getFullYear())}
                 tick={{ fontSize: 11 }}
               />
               <YAxis
