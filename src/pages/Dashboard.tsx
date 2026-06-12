@@ -69,7 +69,7 @@ export default function Dashboard() {
         <StatCard
           label="Vested net worth"
           value={currency(projection.startingVestedNetWorth)}
-          sub="Cash + brokerage + vested equity"
+          sub="Cash + brokerage + vested equity + home"
           tone="good"
         />
         <StatCard

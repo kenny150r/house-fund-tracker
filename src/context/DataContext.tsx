@@ -76,6 +76,11 @@ const DEFAULT_ASSUMPTIONS = (household_id: string): Assumptions => ({
   projection_years: 7,
   dti_max_pct: 0.36,
   reinvest_savings: false,
+  current_home_value: 0,
+  current_mortgage_balance: 0,
+  home_appreciation_pct: 4,
+  home_sale_cost_pct: 0.06,
+  sell_home_for_down_payment: true,
   updated_at: new Date().toISOString(),
 });
 

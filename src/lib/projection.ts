@@ -28,6 +28,7 @@ export interface MonthPoint {
   fund: number;
   brokerage: number;
   vestedEquity: number;
+  homeEquity: number; // current home value (appreciated) minus mortgage balance
   unvestedEquity: number; // after-tax remaining unvested value
   vestedNetWorth: number;
   unvestedNetWorth: number;
@@ -203,6 +204,14 @@ export function runProjection(
     }
   }
 
+  // Current ("starter") home: equity counts toward net worth; if you'll sell it
+  // to buy the next place, the net sale proceeds count toward the liquid fund.
+  const homeValue0 = a.current_home_value;
+  const homeBalance = a.current_mortgage_balance;
+  const homeApprecMonthly = annualGrowthToMonthly(a.home_appreciation_pct);
+  const homeSaleCostPct = a.home_sale_cost_pct;
+  const sellHome = a.sell_home_for_down_payment;
+
   const points: MonthPoint[] = [];
   let affordableMonthIndex: number | null = null;
   const fundGrowthMonthly = a.reinvest_savings
@@ -250,9 +259,17 @@ export function runProjection(
 
     const brokerageGain = Math.max(0, brokerage - liveTickerBasis);
     const brokerageLiquid = brokerage - brokerageGain * CAP_GAINS_DRAG;
-    const liquid = fund + brokerageLiquid + vestedEquity;
 
-    const vestedNetWorth = fund + brokerage + vestedEquity;
+    const homeValue = homeValue0 * Math.pow(1 + homeApprecMonthly, m);
+    const homeEquity = Math.max(0, homeValue - homeBalance);
+    // Net of selling costs; primary-residence gains assumed within the MFJ
+    // capital-gains exclusion, so no tax drag applied here.
+    const homeSaleNet = Math.max(0, homeValue * (1 - homeSaleCostPct) - homeBalance);
+
+    const liquid =
+      fund + brokerageLiquid + vestedEquity + (sellHome ? homeSaleNet : 0);
+
+    const vestedNetWorth = fund + brokerage + vestedEquity + homeEquity;
     const unvestedNetWorth = vestedNetWorth + unvestedEquity;
 
     const affordable = liquid >= requiredCash;
@@ -267,6 +284,7 @@ export function runProjection(
       fund,
       brokerage,
       vestedEquity,
+      homeEquity,
       unvestedEquity,
       vestedNetWorth,
       unvestedNetWorth,

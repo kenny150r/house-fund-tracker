@@ -119,6 +119,11 @@ export interface Assumptions {
   projection_years: number;
   dti_max_pct: number; // 0..1 max PITI / gross monthly income
   reinvest_savings: boolean; // savings grow at QQQ rate vs held as cash
+  current_home_value: number; // starter home current market value
+  current_mortgage_balance: number; // remaining loan balance on the starter home
+  home_appreciation_pct: number; // annual % appreciation of the starter home
+  home_sale_cost_pct: number; // 0..1 selling costs (agent + closing)
+  sell_home_for_down_payment: boolean; // count net sale proceeds toward the fund
   updated_at: string;
 }
 

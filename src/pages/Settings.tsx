@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useData } from "../context/DataContext";
 import { useAuth } from "../context/AuthContext";
 import { PageHeader, Field } from "../components/ui";
+import { currency } from "../lib/format";
 import type { Assumptions } from "../lib/types";
 
 export default function Settings() {
@@ -81,6 +82,51 @@ export default function Settings() {
               />
             </Field>
           </div>
+        </section>
+
+        <section className="card">
+          <h2 className="mb-1 text-sm font-semibold text-slate-700">Current home (starter house)</h2>
+          <p className="mb-4 text-xs text-slate-400">
+            Its equity counts toward net worth. If you'll sell it to buy the next
+            place, net sale proceeds also count toward your down-payment fund.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Current home value ($)">
+              <input className="input" type="number" value={form.current_home_value} onChange={num("current_home_value")} />
+            </Field>
+            <Field label="Mortgage balance ($)">
+              <input className="input" type="number" value={form.current_mortgage_balance} onChange={num("current_mortgage_balance")} />
+            </Field>
+            <Field label="Home appreciation (% / yr)">
+              <input className="input" type="number" step="0.1" value={form.home_appreciation_pct} onChange={num("home_appreciation_pct")} />
+            </Field>
+            <Field label="Selling costs (%)" hint="Agent + closing, e.g. 0.06 = 6%">
+              <input className="input" type="number" step="0.01" value={form.home_sale_cost_pct} onChange={num("home_sale_cost_pct")} />
+            </Field>
+          </div>
+          <label className="mt-4 flex items-center gap-2">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-brand-600"
+              checked={form.sell_home_for_down_payment}
+              onChange={(e) => setForm({ ...form, sell_home_for_down_payment: e.target.checked })}
+            />
+            <span className="text-sm text-slate-600">
+              Sell this home and use its equity toward the down payment
+            </span>
+          </label>
+          <p className="mt-2 text-xs text-slate-400">
+            Current equity:{" "}
+            {currency(Math.max(0, form.current_home_value - form.current_mortgage_balance))}
+            {" · "}net if sold:{" "}
+            {currency(
+              Math.max(
+                0,
+                form.current_home_value * (1 - form.home_sale_cost_pct) -
+                  form.current_mortgage_balance,
+              ),
+            )}
+          </p>
         </section>
 
         <section className="card">
