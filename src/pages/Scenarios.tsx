@@ -97,6 +97,30 @@ export default function Scenarios() {
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <div className="card space-y-5">
           <h2 className="text-sm font-semibold text-slate-700">What-if levers</h2>
+          <div>
+            <span className="label mb-1">Zoox ZAR forecast band</span>
+            <div className="flex flex-wrap gap-2">
+              {([
+                ["low", "Low"],
+                ["mid", "Midpoint"],
+                ["high", "High"],
+                [null, "Default"],
+              ] as const).map(([val, lbl]) => (
+                <button
+                  key={lbl}
+                  type="button"
+                  className={
+                    (s.zooxBand ?? null) === val
+                      ? "btn-primary text-xs"
+                      : "btn-ghost text-xs"
+                  }
+                  onClick={() => set("zooxBand", val)}
+                >
+                  {lbl}
+                </button>
+              ))}
+            </div>
+          </div>
           <Slider
             label="Extra nursing shifts / month"
             value={s.extraShiftsPerMonth}

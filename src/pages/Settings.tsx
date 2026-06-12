@@ -19,6 +19,12 @@ export default function Settings() {
   const num = (k: keyof Assumptions) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm({ ...form, [k]: e.target.value === "" ? 0 : Number(e.target.value) });
 
+  const forecast = form.zoox_fmv_forecast ?? [];
+  const setForecast = (next: typeof forecast) =>
+    setForm({ ...form, zoox_fmv_forecast: next.length ? next : null });
+  const updateForecast = (idx: number, key: "year" | "low" | "high", val: number) =>
+    setForecast(forecast.map((p, i) => (i === idx ? { ...p, [key]: val } : p)));
+
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!form) return;
@@ -164,6 +170,93 @@ export default function Settings() {
               />
               <span className="text-sm text-slate-600">Grow monthly savings at QQQ rate (vs hold as cash)</span>
             </label>
+          </div>
+        </section>
+
+        <section className="card">
+          <h2 className="mb-1 text-sm font-semibold text-slate-700">
+            Zoox ZAR price forecast
+          </h2>
+          <p className="mb-4 text-xs text-slate-400">
+            Enter Zoox's low/high estimated ZAR price per share by year. When present,
+            projections interpolate this band instead of the flat Zoox growth % above.
+            Year 0 uses the current FMV ({currency(form.zoox_fmv_per_share, 2)}).
+          </p>
+
+          <div className="mb-4">
+            <span className="label">Band used for main projection</span>
+            <div className="flex gap-2">
+              {(["low", "mid", "high"] as const).map((b) => (
+                <button
+                  key={b}
+                  type="button"
+                  className={form.zoox_forecast_band === b ? "btn-primary" : "btn-ghost"}
+                  onClick={() => setForm({ ...form, zoox_forecast_band: b })}
+                >
+                  {b === "low" ? "Low" : b === "high" ? "High" : "Midpoint"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {forecast.length === 0 ? (
+            <p className="text-xs text-slate-400">
+              No forecast yet — using flat growth. Add yearly points below.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                <span className="w-28">Years from now</span>
+                <span className="w-32">Low ($/share)</span>
+                <span className="w-32">High ($/share)</span>
+              </div>
+              {forecast.map((p, idx) => (
+                <div key={idx} className="flex flex-wrap items-center gap-2">
+                  <input
+                    className="input w-28"
+                    type="number"
+                    step="0.5"
+                    value={p.year}
+                    onChange={(e) => updateForecast(idx, "year", Number(e.target.value))}
+                  />
+                  <input
+                    className="input w-32"
+                    type="number"
+                    step="any"
+                    value={p.low}
+                    onChange={(e) => updateForecast(idx, "low", Number(e.target.value))}
+                  />
+                  <input
+                    className="input w-32"
+                    type="number"
+                    step="any"
+                    value={p.high}
+                    onChange={(e) => updateForecast(idx, "high", Number(e.target.value))}
+                  />
+                  <button
+                    type="button"
+                    className="text-xs text-red-500 hover:underline"
+                    onClick={() => setForecast(forecast.filter((_, i) => i !== idx))}
+                  >
+                    remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="mt-3">
+            <button
+              type="button"
+              className="btn-ghost text-xs"
+              onClick={() =>
+                setForecast([
+                  ...forecast,
+                  { year: forecast.length + 1, low: 0, high: 0 },
+                ])
+              }
+            >
+              + Add year
+            </button>
           </div>
         </section>
 

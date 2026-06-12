@@ -98,6 +98,14 @@ export interface Expense {
 }
 
 export type FilingStatus = "mfj" | "single";
+export type ForecastBand = "low" | "mid" | "high";
+
+// One point of Zoox's ZAR price forecast (FMV per share).
+export interface ZooxForecastPoint {
+  year: number; // years from now (year 0 = current FMV)
+  low: number;
+  high: number;
+}
 
 export interface Assumptions {
   household_id: UUID;
@@ -115,7 +123,9 @@ export interface Assumptions {
   growth_amzn_pct: number;
   growth_zoox_pct: number;
   salary_growth_pct: number;
-  zoox_fmv_per_share: number; // current private valuation
+  zoox_fmv_per_share: number; // current private valuation (forecast year 0)
+  zoox_fmv_forecast: ZooxForecastPoint[] | null; // low/high band by year
+  zoox_forecast_band: ForecastBand; // which band the main projection uses
   projection_years: number;
   dti_max_pct: number; // 0..1 max PITI / gross monthly income
   reinvest_savings: boolean; // savings grow at QQQ rate vs held as cash
@@ -161,6 +171,7 @@ export interface ScenarioOverrides {
   targetHousePrice: number | null;
   downPaymentPct: number | null;
   extraMonthlyContribution: number; // additional savings/month
+  zooxBand: ForecastBand | null; // override the saved ZAR forecast band
 }
 
 export const ZERO_SCENARIO: ScenarioOverrides = {
@@ -171,4 +182,5 @@ export const ZERO_SCENARIO: ScenarioOverrides = {
   targetHousePrice: null,
   downPaymentPct: null,
   extraMonthlyContribution: 0,
+  zooxBand: null,
 };

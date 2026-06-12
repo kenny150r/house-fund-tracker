@@ -73,6 +73,8 @@ const DEFAULT_ASSUMPTIONS = (household_id: string): Assumptions => ({
   growth_zoox_pct: 5,
   salary_growth_pct: 4,
   zoox_fmv_per_share: 0,
+  zoox_fmv_forecast: null,
+  zoox_forecast_band: "mid",
   projection_years: 7,
   dti_max_pct: 0.36,
   reinvest_savings: false,

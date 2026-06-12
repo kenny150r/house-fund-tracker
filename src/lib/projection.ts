@@ -156,6 +156,40 @@ export function runProjection(
   const amznPrice0 = snapshot.prices.AMZN ?? 0;
   const zooxFmv0 = a.zoox_fmv_per_share;
 
+  // Zoox ZAR price path: if a low/high forecast exists, interpolate the selected
+  // band (overridable per scenario); otherwise fall back to flat % growth.
+  const zooxBand = scenario.zooxBand ?? a.zoox_forecast_band ?? "mid";
+  const zooxForecast = (a.zoox_fmv_forecast ?? [])
+    .filter((p) => p && p.year > 0)
+    .sort((x, y) => x.year - y.year);
+
+  function bandVal(p: { low: number; high: number }): number {
+    if (zooxBand === "low") return p.low;
+    if (zooxBand === "high") return p.high;
+    return (p.low + p.high) / 2;
+  }
+
+  function zooxFmvAt(monthIndex: number): number {
+    const m = Math.max(0, monthIndex);
+    if (zooxForecast.length > 0) {
+      const yearF = m / 12;
+      const pts = [{ year: 0, low: zooxFmv0, high: zooxFmv0 }, ...zooxForecast];
+      const last = pts[pts.length - 1];
+      if (yearF >= last.year) return bandVal(last); // hold flat beyond forecast
+      for (let i = 0; i < pts.length - 1; i++) {
+        const lo = pts[i];
+        const hi = pts[i + 1];
+        if (yearF >= lo.year && yearF <= hi.year) {
+          const span = hi.year - lo.year || 1;
+          const f = (yearF - lo.year) / span;
+          return bandVal(lo) + (bandVal(hi) - bandVal(lo)) * f;
+        }
+      }
+      return bandVal(pts[0]);
+    }
+    return zooxFmv0 * Math.pow(1 + zooxGrowthMonthly, m);
+  }
+
   // Value of a tranche at its vest month (gross + after-tax), valued at the
   // projected price for that month.
   function trancheValueAtVest(t: TrancheRuntime, monthIndex: number, marginal: number) {
@@ -164,7 +198,7 @@ export function runProjection(
       const price = amznPrice0 * Math.pow(1 + amznGrowthMonthly, Math.max(0, monthIndex));
       gross = t.units * price;
     } else {
-      const fmv = zooxFmv0 * Math.pow(1 + zooxGrowthMonthly, Math.max(0, monthIndex));
+      const fmv = zooxFmvAt(monthIndex);
       const intrinsic = Math.max(0, fmv - (t.grant.strike_price ?? 0));
       gross = t.units * intrinsic;
     }
@@ -219,10 +253,12 @@ export function runProjection(
     : 0;
 
   for (let m = 0; m <= months; m++) {
-    // Grow pools (after the first month).
+    // Grow pools (after the first month). The Zoox pool tracks the forecast
+    // price path month-over-month rather than a flat rate.
     if (m > 0) {
       amznPool *= 1 + amznGrowthMonthly;
-      zooxPool *= 1 + zooxGrowthMonthly;
+      const prevFmv = zooxFmvAt(m - 1);
+      zooxPool *= prevFmv > 0 ? zooxFmvAt(m) / prevFmv : 1;
       fund *= 1 + fundGrowthMonthly;
     }
 
