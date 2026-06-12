@@ -39,6 +39,17 @@ export function formatDate(iso: string): string {
   });
 }
 
+export function formatDateTime(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 // One tick timestamp per distinct calendar year, so time-axis labels don't
 // repeat the same year across multiple monthly data points.
 export function yearTicks(timestamps: number[]): number[] {

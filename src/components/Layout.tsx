@@ -1,7 +1,7 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useData } from "../context/DataContext";
-import { formatDate } from "../lib/format";
+import { formatDateTime } from "../lib/format";
 
 const NAV = [
   { to: "/", label: "Dashboard", end: true },
@@ -64,7 +64,9 @@ export default function Layout() {
               <div>AMZN ${market.quotes.AMZN?.toFixed(2)}</div>
               <div>30yr {market.mortgageRate?.toFixed(2)}%</div>
               <div className="text-slate-400">
-                {market.stale ? "estimated" : `as of ${formatDate(market.asOf)}`}
+                {market.stale
+                  ? "estimated"
+                  : `updated ${formatDateTime(market.asOf)}`}
               </div>
             </div>
           )}

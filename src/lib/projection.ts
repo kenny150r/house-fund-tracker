@@ -253,6 +253,18 @@ export function runProjection(
   const homeSaleCostPct = a.home_sale_cost_pct;
   const sellHome = a.sell_home_for_down_payment;
 
+  // Mortgage payment (PITI) at the target price. Fixed across months; what
+  // changes month-to-month is qualifying income, so DTI improves over time.
+  const rate = a.mortgage_rate_override ?? snapshot.mortgageRate;
+  const piti = computePiti({
+    housePrice: targetPrice,
+    downPaymentPct: downPct,
+    annualRatePct: rate,
+    propertyTaxRatePct: a.property_tax_rate,
+    homeInsuranceAnnual: a.home_insurance_annual,
+    hoaMonthly: a.hoa_monthly,
+  });
+
   const points: MonthPoint[] = [];
   let affordableMonthIndex: number | null = null;
   const fundGrowthMonthly = a.reinvest_savings
@@ -291,11 +303,13 @@ export function runProjection(
     const brokerage = liveTickerValue(m);
     const vestedEquity = amznPool + zooxPool;
 
-    // Remaining unvested grants' after-tax value as of this month.
+    // Remaining unvested grants, valued after-tax at TODAY's prices (not their
+    // future projected vest price). This keeps "Incl. unvested" an intuitive
+    // "what it's all worth right now" figure rather than a future-dollar mix.
     let unvestedEquity = 0;
     for (const t of tranches) {
       if (t.monthIndex > m) {
-        const { afterTax } = trancheValueAtVest(t, t.monthIndex, baseTax.marginalOrdinaryRate);
+        const { afterTax } = trancheValueAtVest(t, 0, baseTax.marginalOrdinaryRate);
         unvestedEquity += afterTax;
       }
     }
@@ -315,7 +329,24 @@ export function runProjection(
     const vestedNetWorth = fund + brokerage + vestedEquity + homeEquity;
     const unvestedNetWorth = vestedNetWorth + unvestedEquity;
 
-    const affordable = liquid >= requiredCash;
+    // Qualifying income this month for DTI: wages plus gross equity expected to
+    // vest over the next 12 months (rolling), since refreshers keep coming.
+    let equityNext12Gross = 0;
+    for (const t of tranches) {
+      if (t.monthIndex > m && t.monthIndex <= m + 12) {
+        equityNext12Gross += trancheValueAtVest(
+          t,
+          t.monthIndex,
+          baseTax.marginalOrdinaryRate,
+        ).gross;
+      }
+    }
+    const grossMonthlyIncomeM = grossMonthlyWages + equityNext12Gross / 12;
+    const dtiPassesM =
+      grossMonthlyIncomeM > 0 && piti.total / grossMonthlyIncomeM <= a.dti_max_pct;
+
+    // Affordable requires both enough cash AND a passing debt-to-income ratio.
+    const affordable = liquid >= requiredCash && dtiPassesM;
     if (affordable && affordableMonthIndex === null && m > 0) {
       affordableMonthIndex = m;
     }
@@ -338,16 +369,7 @@ export function runProjection(
     });
   }
 
-  // DTI check at target price using current/override mortgage rate.
-  const rate = a.mortgage_rate_override ?? snapshot.mortgageRate;
-  const piti = computePiti({
-    housePrice: targetPrice,
-    downPaymentPct: downPct,
-    annualRatePct: rate,
-    propertyTaxRatePct: a.property_tax_rate,
-    homeInsuranceAnnual: a.home_insurance_annual,
-    hoaMonthly: a.hoa_monthly,
-  });
+  // Snapshot DTI (today) for the dashboard card, using current income.
   // Gross equity income expected over the next 12 months (RSU/ZAR vesting),
   // counted toward DTI since refreshers are expected to continue. Uses gross
   // (pre-tax) value to match how lenders evaluate qualifying income.

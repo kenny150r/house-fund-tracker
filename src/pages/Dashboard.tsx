@@ -17,7 +17,7 @@ import { useProjection } from "../hooks/useProjection";
 import { runProjection } from "../lib/projection";
 import { ZERO_SCENARIO } from "../lib/types";
 import { PageHeader, StatCard, EmptyState } from "../components/ui";
-import { compactCurrency, currency, formatDate, percent, yearTicks } from "../lib/format";
+import { compactCurrency, currency, formatDate, formatDateTime, percent, yearTicks } from "../lib/format";
 
 export default function Dashboard() {
   const { snapshot, assumptions, market, seedStarterData, holdings } = useData();
@@ -67,7 +67,7 @@ export default function Dashboard() {
         title="Dashboard"
         subtitle={
           market
-            ? `QQQ $${market.quotes.QQQ?.toFixed(0)} · AMZN $${market.quotes.AMZN?.toFixed(0)} · 30yr ${market.mortgageRate?.toFixed(2)}%${market.stale ? " (estimated)" : ""}`
+            ? `QQQ $${market.quotes.QQQ?.toFixed(0)} · AMZN $${market.quotes.AMZN?.toFixed(0)} · 30yr ${market.mortgageRate?.toFixed(2)}% · ${market.stale ? "estimated" : `updated ${formatDateTime(market.asOf)}`}`
             : undefined
         }
       />
@@ -96,7 +96,7 @@ export default function Dashboard() {
         <StatCard
           label="Incl. unvested"
           value={currency(projection.startingUnvestedNetWorth)}
-          sub="After-tax, all grants fully vested"
+          sub="Vested + unvested grants, after-tax at today's prices"
         />
         <StatCard
           label="Liquid for down payment"
