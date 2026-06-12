@@ -43,7 +43,9 @@ export interface ProjectionResult {
   affordableMonthIndex: number | null;
   requiredCash: number;
   monthlyPiti: number;
-  grossMonthlyIncome: number;
+  grossMonthlyIncome: number; // wages + equity (used for DTI)
+  wageMonthlyIncome: number;
+  equityMonthlyIncome: number; // forward-12mo gross vesting / 12
   dtiPasses: boolean;
   dtiRatio: number;
   startingVestedNetWorth: number;
@@ -285,7 +287,22 @@ export function runProjection(
     homeInsuranceAnnual: a.home_insurance_annual,
     hoaMonthly: a.hoa_monthly,
   });
-  const grossMonthlyIncome = baseAnnualGross / 12;
+  // Gross equity income expected over the next 12 months (RSU/ZAR vesting),
+  // counted toward DTI since refreshers are expected to continue. Uses gross
+  // (pre-tax) value to match how lenders evaluate qualifying income.
+  let equityAnnualGross = 0;
+  for (const t of tranches) {
+    if (t.monthIndex >= 1 && t.monthIndex <= 12) {
+      equityAnnualGross += trancheValueAtVest(
+        t,
+        t.monthIndex,
+        baseTax.marginalOrdinaryRate,
+      ).gross;
+    }
+  }
+  const wageMonthlyIncome = baseAnnualGross / 12;
+  const equityMonthlyIncome = equityAnnualGross / 12;
+  const grossMonthlyIncome = wageMonthlyIncome + equityMonthlyIncome;
   const dtiRatio = grossMonthlyIncome > 0 ? piti.total / grossMonthlyIncome : Infinity;
   const dtiPasses = dtiRatio <= a.dti_max_pct;
 
@@ -298,6 +315,8 @@ export function runProjection(
     requiredCash,
     monthlyPiti: piti.total,
     grossMonthlyIncome,
+    wageMonthlyIncome,
+    equityMonthlyIncome,
     dtiPasses,
     dtiRatio,
     startingVestedNetWorth: start.vestedNetWorth,

@@ -211,7 +211,7 @@ export default function Dashboard() {
         <StatCard
           label="Debt-to-income"
           value={percent(projection.dtiRatio)}
-          sub={`Max ${percent(assumptions.dti_max_pct, 0)}`}
+          sub={`Max ${percent(assumptions.dti_max_pct, 0)} · income ${compactCurrency(projection.grossMonthlyIncome)}/mo incl. ${compactCurrency(projection.equityMonthlyIncome)} equity`}
           tone={projection.dtiPasses ? "good" : "bad"}
         />
         <StatCard
