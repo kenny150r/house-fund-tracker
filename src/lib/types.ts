@@ -119,13 +119,20 @@ export interface Assumptions {
   home_insurance_annual: number;
   hoa_monthly: number;
   inflation_pct: number; // annual % applied to expenses
-  growth_qqq_pct: number; // annual %
-  growth_amzn_pct: number;
-  growth_zoox_pct: number;
-  salary_growth_pct: number;
+  forecast_band: ForecastBand; // saved band applied to ALL growth drivers
+  growth_qqq_pct: number; // annual % (midpoint)
+  growth_qqq_low_pct: number;
+  growth_qqq_high_pct: number;
+  growth_amzn_pct: number; // midpoint
+  growth_amzn_low_pct: number;
+  growth_amzn_high_pct: number;
+  growth_zoox_pct: number; // fallback when no ZAR forecast
+  salary_growth_pct: number; // midpoint
+  salary_growth_low_pct: number;
+  salary_growth_high_pct: number;
   zoox_fmv_per_share: number; // current private valuation (forecast year 0)
   zoox_fmv_forecast: ZooxForecastPoint[] | null; // low/high band by year
-  zoox_forecast_band: ForecastBand; // which band the main projection uses
+  zoox_forecast_band: ForecastBand; // legacy; superseded by forecast_band
   projection_years: number;
   dti_max_pct: number; // 0..1 max PITI / gross monthly income
   reinvest_savings: boolean; // savings grow at QQQ rate vs held as cash
@@ -171,7 +178,7 @@ export interface ScenarioOverrides {
   targetHousePrice: number | null;
   downPaymentPct: number | null;
   extraMonthlyContribution: number; // additional savings/month
-  zooxBand: ForecastBand | null; // override the saved ZAR forecast band
+  band: ForecastBand | null; // override the saved forecast band (all equities)
 }
 
 export const ZERO_SCENARIO: ScenarioOverrides = {
@@ -182,5 +189,5 @@ export const ZERO_SCENARIO: ScenarioOverrides = {
   targetHousePrice: null,
   downPaymentPct: null,
   extraMonthlyContribution: 0,
-  zooxBand: null,
+  band: null,
 };

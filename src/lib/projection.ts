@@ -82,8 +82,16 @@ export function runProjection(
   const downPct = scenario.downPaymentPct ?? a.down_payment_pct;
   const requiredCash = targetPrice * downPct + targetPrice * a.closing_cost_pct;
 
+  // ---- Forecast band: a single Low/Mid/High selector that picks the low,
+  // midpoint, or high growth assumption for every driver (and the ZAR forecast).
+  const band = scenario.band ?? a.forecast_band ?? "mid";
+  const pick = (low: number, mid: number, high: number): number =>
+    band === "low" ? low : band === "high" ? high : mid;
+
   // ---- Income (annual, grown each year) ----
-  const wageGrowthMonthly = annualGrowthToMonthly(a.salary_growth_pct);
+  const wageGrowthMonthly = annualGrowthToMonthly(
+    pick(a.salary_growth_low_pct, a.salary_growth_pct, a.salary_growth_high_pct),
+  );
 
   // Per-owner baseline gross annual wages, including baseline shifts + scenario
   // extra shifts (applied to shift-type sources).
@@ -131,8 +139,8 @@ export function runProjection(
   }
 
   const growthByTicker: Record<string, number> = {
-    QQQ: effGrowth(a.growth_qqq_pct, scenario),
-    AMZN: effGrowth(a.growth_amzn_pct, scenario),
+    QQQ: effGrowth(pick(a.growth_qqq_low_pct, a.growth_qqq_pct, a.growth_qqq_high_pct), scenario),
+    AMZN: effGrowth(pick(a.growth_amzn_low_pct, a.growth_amzn_pct, a.growth_amzn_high_pct), scenario),
   };
   function tickerMonthlyGrowth(t: string): number {
     return annualGrowthToMonthly(growthByTicker[t] ?? a.growth_qqq_pct);
@@ -140,7 +148,7 @@ export function runProjection(
 
   // ---- Equity grant tranches relative to start ----
   const amznGrowthMonthly = annualGrowthToMonthly(
-    effGrowth(a.growth_amzn_pct, scenario),
+    effGrowth(pick(a.growth_amzn_low_pct, a.growth_amzn_pct, a.growth_amzn_high_pct), scenario),
   );
   const zooxGrowthMonthly = annualGrowthToMonthly(
     effGrowth(a.growth_zoox_pct, scenario),
@@ -157,15 +165,14 @@ export function runProjection(
   const zooxFmv0 = a.zoox_fmv_per_share;
 
   // Zoox ZAR price path: if a low/high forecast exists, interpolate the selected
-  // band (overridable per scenario); otherwise fall back to flat % growth.
-  const zooxBand = scenario.zooxBand ?? a.zoox_forecast_band ?? "mid";
+  // band (the unified forecast band); otherwise fall back to flat % growth.
   const zooxForecast = (a.zoox_fmv_forecast ?? [])
     .filter((p) => p && p.year > 0)
     .sort((x, y) => x.year - y.year);
 
   function bandVal(p: { low: number; high: number }): number {
-    if (zooxBand === "low") return p.low;
-    if (zooxBand === "high") return p.high;
+    if (band === "low") return p.low;
+    if (band === "high") return p.high;
     return (p.low + p.high) / 2;
   }
 

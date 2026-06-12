@@ -136,19 +136,67 @@ export default function Settings() {
         </section>
 
         <section className="card">
-          <h2 className="mb-4 text-sm font-semibold text-slate-700">Growth & inflation (annual %)</h2>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Field label="QQQ growth">
-              <input className="input" type="number" step="0.1" value={form.growth_qqq_pct} onChange={num("growth_qqq_pct")} />
-            </Field>
-            <Field label="AMZN growth">
-              <input className="input" type="number" step="0.1" value={form.growth_amzn_pct} onChange={num("growth_amzn_pct")} />
-            </Field>
-            <Field label="Zoox growth">
+          <h2 className="mb-1 text-sm font-semibold text-slate-700">Growth & inflation (annual %)</h2>
+          <p className="mb-4 text-xs text-slate-400">
+            Set Low / Midpoint / High annual growth per driver. The band below picks which
+            the projection uses; the Dashboard can shade the full Low–High range.
+          </p>
+
+          <div className="mb-4">
+            <span className="label">Forecast band (applies to all equities)</span>
+            <div className="flex gap-2">
+              {(["low", "mid", "high"] as const).map((b) => (
+                <button
+                  key={b}
+                  type="button"
+                  className={form.forecast_band === b ? "btn-primary" : "btn-ghost"}
+                  onClick={() => setForm({ ...form, forecast_band: b, zoox_forecast_band: b })}
+                >
+                  {b === "low" ? "Low" : b === "high" ? "High" : "Midpoint"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+              <span className="w-20">Driver</span>
+              <span className="w-24">Low %</span>
+              <span className="w-24">Mid %</span>
+              <span className="w-24">High %</span>
+            </div>
+            <GrowthRow
+              label="QQQ"
+              low={form.growth_qqq_low_pct}
+              mid={form.growth_qqq_pct}
+              high={form.growth_qqq_high_pct}
+              onLow={num("growth_qqq_low_pct")}
+              onMid={num("growth_qqq_pct")}
+              onHigh={num("growth_qqq_high_pct")}
+            />
+            <GrowthRow
+              label="AMZN"
+              low={form.growth_amzn_low_pct}
+              mid={form.growth_amzn_pct}
+              high={form.growth_amzn_high_pct}
+              onLow={num("growth_amzn_low_pct")}
+              onMid={num("growth_amzn_pct")}
+              onHigh={num("growth_amzn_high_pct")}
+            />
+            <GrowthRow
+              label="Salary"
+              low={form.salary_growth_low_pct}
+              mid={form.salary_growth_pct}
+              high={form.salary_growth_high_pct}
+              onLow={num("salary_growth_low_pct")}
+              onMid={num("salary_growth_pct")}
+              onHigh={num("salary_growth_high_pct")}
+            />
+          </div>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <Field label="Zoox growth (fallback %)" hint="Used only when no ZAR forecast">
               <input className="input" type="number" step="0.1" value={form.growth_zoox_pct} onChange={num("growth_zoox_pct")} />
-            </Field>
-            <Field label="Salary growth">
-              <input className="input" type="number" step="0.1" value={form.salary_growth_pct} onChange={num("salary_growth_pct")} />
             </Field>
             <Field label="Expense inflation">
               <input className="input" type="number" step="0.1" value={form.inflation_pct} onChange={num("inflation_pct")} />
@@ -183,21 +231,10 @@ export default function Settings() {
             Year 0 uses the current FMV ({currency(form.zoox_fmv_per_share, 2)}).
           </p>
 
-          <div className="mb-4">
-            <span className="label">Band used for main projection</span>
-            <div className="flex gap-2">
-              {(["low", "mid", "high"] as const).map((b) => (
-                <button
-                  key={b}
-                  type="button"
-                  className={form.zoox_forecast_band === b ? "btn-primary" : "btn-ghost"}
-                  onClick={() => setForm({ ...form, zoox_forecast_band: b })}
-                >
-                  {b === "low" ? "Low" : b === "high" ? "High" : "Midpoint"}
-                </button>
-              ))}
-            </div>
-          </div>
+          <p className="mb-4 text-xs text-slate-400">
+            The Low/Midpoint/High band is shared with the other equities — set it in the
+            Growth section above.
+          </p>
 
           {forecast.length === 0 ? (
             <p className="text-xs text-slate-400">
@@ -303,6 +340,35 @@ export default function Settings() {
           </button>
         </div>
       </section>
+    </div>
+  );
+}
+
+type ChangeHandler = (e: React.ChangeEvent<HTMLInputElement>) => void;
+
+function GrowthRow({
+  label,
+  low,
+  mid,
+  high,
+  onLow,
+  onMid,
+  onHigh,
+}: {
+  label: string;
+  low: number;
+  mid: number;
+  high: number;
+  onLow: ChangeHandler;
+  onMid: ChangeHandler;
+  onHigh: ChangeHandler;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="w-20 text-sm font-medium text-slate-600">{label}</span>
+      <input className="input w-24" type="number" step="0.1" value={low} onChange={onLow} />
+      <input className="input w-24" type="number" step="0.1" value={mid} onChange={onMid} />
+      <input className="input w-24" type="number" step="0.1" value={high} onChange={onHigh} />
     </div>
   );
 }

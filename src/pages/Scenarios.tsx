@@ -98,7 +98,7 @@ export default function Scenarios() {
         <div className="card space-y-5">
           <h2 className="text-sm font-semibold text-slate-700">What-if levers</h2>
           <div>
-            <span className="label mb-1">Zoox ZAR forecast band</span>
+            <span className="label mb-1">Forecast band (all equities)</span>
             <div className="flex flex-wrap gap-2">
               {([
                 ["low", "Low"],
@@ -110,11 +110,11 @@ export default function Scenarios() {
                   key={lbl}
                   type="button"
                   className={
-                    (s.zooxBand ?? null) === val
+                    (s.band ?? null) === val
                       ? "btn-primary text-xs"
                       : "btn-ghost text-xs"
                   }
-                  onClick={() => set("zooxBand", val)}
+                  onClick={() => set("band", val)}
                 >
                   {lbl}
                 </button>
