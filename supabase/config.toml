@@ -1,0 +1,5 @@
+# Supabase CLI config. Link with:  supabase link --project-ref gcqjjpbshoogojsozflp
+project_id = "gcqjjpbshoogojsozflp"
+
+[functions.market-data]
+verify_jwt = true
