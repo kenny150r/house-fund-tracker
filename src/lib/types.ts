@@ -47,6 +47,12 @@ export interface StockTransaction {
 
 export type GrantType = "amazon_rsu" | "zoox_option";
 
+// One tranche of a custom (graded) vesting schedule.
+export interface VestTranche {
+  month: number; // months from grant date
+  fraction: number; // 0..1 portion of total_units vesting at this point
+}
+
 export interface EquityGrant {
   id: UUID;
   household_id: UUID;
@@ -54,11 +60,12 @@ export interface EquityGrant {
   type: GrantType;
   grant_date: string; // ISO date
   total_units: number;
-  strike_price: number | null; // options only
+  strike_price: number | null; // options / ZAR base price
   fmv_per_share: number | null; // private valuation (Zoox); null => use live ticker
-  cliff_months: number; // months until first vest
-  period_months: number; // months between vests after cliff
-  duration_months: number; // total vesting length
+  cliff_months: number; // months until first vest (even-tranche mode)
+  period_months: number; // months between vests after cliff (even-tranche mode)
+  duration_months: number; // total vesting length (even-tranche mode)
+  vest_schedule: VestTranche[] | null; // custom graded schedule (overrides above)
   created_at: string;
 }
 

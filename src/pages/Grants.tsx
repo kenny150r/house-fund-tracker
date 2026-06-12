@@ -2,13 +2,27 @@ import { useState } from "react";
 import { useData } from "../context/DataContext";
 import { PageHeader, Field, EmptyState, StatCard } from "../components/ui";
 import { currency, formatDate, shares as fmtShares } from "../lib/format";
-import { vestStatus } from "../lib/vesting";
+import { vestStatus, addMonths } from "../lib/vesting";
 import type { GrantType, EquityGrant } from "../lib/types";
 
 const PRESETS: Record<GrantType, { cliff: number; period: number; duration: number }> = {
   amazon_rsu: { cliff: 0, period: 3, duration: 48 }, // quarterly over 4 years
   zoox_option: { cliff: 12, period: 12, duration: 72 }, // 1yr cliff, 6 years
 };
+
+// Zoox ZAR graded vesting: 0% yr1, 15% yr2, 20% yrs 3-5, 25% yr6.
+const ZOOX_ZAR_PRESET = [
+  { month: 24, percent: 15 },
+  { month: 36, percent: 20 },
+  { month: 48, percent: 20 },
+  { month: 60, percent: 20 },
+  { month: 72, percent: 25 },
+];
+
+interface TrancheInput {
+  month: number;
+  percent: number;
+}
 
 export default function Grants() {
   const { grants, assumptions, prices, insertRow, deleteRow } = useData();
@@ -21,6 +35,14 @@ export default function Grants() {
   const [cliff, setCliff] = useState(PRESETS.amazon_rsu.cliff);
   const [period, setPeriod] = useState(PRESETS.amazon_rsu.period);
   const [duration, setDuration] = useState(PRESETS.amazon_rsu.duration);
+  const [useCustom, setUseCustom] = useState(false);
+  const [tranches, setTranches] = useState<TrancheInput[]>([]);
+
+  const trancheTotal = tranches.reduce((s, t) => s + t.percent, 0);
+
+  function updateTranche(idx: number, key: keyof TrancheInput, val: number) {
+    setTranches(tranches.map((t, i) => (i === idx ? { ...t, [key]: val } : t)));
+  }
 
   function applyPreset(t: GrantType) {
     setType(t);
@@ -38,8 +60,14 @@ export default function Grants() {
   async function add(e: React.FormEvent) {
     e.preventDefault();
     if (!units) return;
+    const vest_schedule =
+      useCustom && tranches.length > 0
+        ? tranches
+            .filter((t) => t.percent > 0)
+            .map((t) => ({ month: t.month, fraction: t.percent / 100 }))
+        : null;
     await insertRow("equity_grants", {
-      label: label || (type === "amazon_rsu" ? "Amazon RSU" : "Zoox options"),
+      label: label || (type === "amazon_rsu" ? "Amazon RSU" : "Zoox grant"),
       type,
       grant_date: grantDate,
       total_units: Number(units),
@@ -48,11 +76,14 @@ export default function Grants() {
       cliff_months: cliff,
       period_months: period,
       duration_months: duration,
+      vest_schedule,
     });
     setLabel("");
     setUnits("");
     setStrike("");
     setFmv("");
+    setTranches([]);
+    setUseCustom(false);
   }
 
   let totalVested = 0;
@@ -118,16 +149,102 @@ export default function Grants() {
               </Field>
             </>
           )}
-          <Field label="Cliff (months)">
-            <input className="input" type="number" value={cliff} onChange={(e) => setCliff(Number(e.target.value))} />
-          </Field>
-          <Field label="Vest every (months)">
-            <input className="input" type="number" value={period} onChange={(e) => setPeriod(Number(e.target.value))} />
-          </Field>
-          <Field label="Total duration (months)">
-            <input className="input" type="number" value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
-          </Field>
+          {!useCustom && (
+            <>
+              <Field label="Cliff (months)">
+                <input className="input" type="number" value={cliff} onChange={(e) => setCliff(Number(e.target.value))} />
+              </Field>
+              <Field label="Vest every (months)">
+                <input className="input" type="number" value={period} onChange={(e) => setPeriod(Number(e.target.value))} />
+              </Field>
+              <Field label="Total duration (months)">
+                <input className="input" type="number" value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
+              </Field>
+            </>
+          )}
         </div>
+
+        <div className="mt-4 rounded-lg border border-slate-200 p-3">
+          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-brand-600"
+              checked={useCustom}
+              onChange={(e) => setUseCustom(e.target.checked)}
+            />
+            Custom graded vesting schedule (e.g. Zoox ZARs)
+          </label>
+          {useCustom && (
+            <div className="mt-3 space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="btn-ghost text-xs"
+                  onClick={() => setTranches(ZOOX_ZAR_PRESET.map((t) => ({ ...t })))}
+                >
+                  Zoox ZAR preset (0/15/20/20/20/25)
+                </button>
+                <button
+                  type="button"
+                  className="btn-ghost text-xs"
+                  onClick={() => setTranches([...tranches, { month: 12, percent: 0 }])}
+                >
+                  + Add tranche
+                </button>
+                {tranches.length > 0 && (
+                  <button type="button" className="btn-ghost text-xs" onClick={() => setTranches([])}>
+                    Clear
+                  </button>
+                )}
+              </div>
+              {tranches.length === 0 ? (
+                <p className="text-xs text-slate-400">
+                  Add tranches or use the Zoox ZAR preset. Each row vests a % of the grant
+                  at a month offset from the grant date.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {tranches.map((t, idx) => (
+                    <div key={idx} className="flex flex-wrap items-center gap-2">
+                      <input
+                        className="input w-24"
+                        type="number"
+                        value={t.month}
+                        onChange={(e) => updateTranche(idx, "month", Number(e.target.value))}
+                      />
+                      <span className="text-xs text-slate-500">months →</span>
+                      <input
+                        className="input w-24"
+                        type="number"
+                        step="any"
+                        value={t.percent}
+                        onChange={(e) => updateTranche(idx, "percent", Number(e.target.value))}
+                      />
+                      <span className="text-xs text-slate-500">%</span>
+                      <span className="text-xs text-slate-400">
+                        {formatDate(addMonths(new Date(grantDate), t.month).toISOString())}
+                      </span>
+                      <button
+                        type="button"
+                        className="text-xs text-red-500 hover:underline"
+                        onClick={() => setTranches(tranches.filter((_, i) => i !== idx))}
+                      >
+                        remove
+                      </button>
+                    </div>
+                  ))}
+                  <div
+                    className={`text-xs ${Math.abs(trancheTotal - 100) < 0.01 ? "text-emerald-600" : "text-amber-600"}`}
+                  >
+                    Total: {trancheTotal.toFixed(0)}%{" "}
+                    {Math.abs(trancheTotal - 100) < 0.01 ? "✓" : "(should equal 100%)"}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         <div className="mt-4">
           <button className="btn-primary">Add grant</button>
         </div>
@@ -155,8 +272,10 @@ export default function Grants() {
                     </div>
                     <div className="mt-1 text-xs text-slate-500">
                       Granted {formatDate(g.grant_date)} · {fmtShares(g.total_units)} units ·{" "}
-                      {g.cliff_months}mo cliff, every {g.period_months}mo over {g.duration_months}mo
-                      {g.type === "zoox_option" && ` · strike ${currency(g.strike_price ?? 0, 2)}`}
+                      {g.vest_schedule && g.vest_schedule.length > 0
+                        ? `custom schedule (${g.vest_schedule.length} tranches)`
+                        : `${g.cliff_months}mo cliff, every ${g.period_months}mo over ${g.duration_months}mo`}
+                      {g.type === "zoox_option" && ` · base ${currency(g.strike_price ?? 0, 2)}`}
                     </div>
                   </div>
                   <button

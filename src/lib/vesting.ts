@@ -6,11 +6,24 @@ export interface VestEvent {
   cumulativeUnits: number;
 }
 
-// Build the full vest schedule for a grant: a cliff at `cliff_months`, then
-// even tranches every `period_months` until `duration_months` is reached.
+// Build the full vest schedule for a grant. If the grant has a custom
+// `vest_schedule` (graded vesting, e.g. Zoox ZARs), use it directly. Otherwise
+// fall back to a cliff at `cliff_months` then even tranches every
+// `period_months` until `duration_months`.
 export function buildVestSchedule(grant: EquityGrant): VestEvent[] {
   const start = new Date(grant.grant_date);
   if (isNaN(start.getTime()) || grant.total_units <= 0) return [];
+
+  if (grant.vest_schedule && grant.vest_schedule.length > 0) {
+    let cumulative = 0;
+    return [...grant.vest_schedule]
+      .sort((a, b) => a.month - b.month)
+      .map((t) => {
+        const units = grant.total_units * t.fraction;
+        cumulative += units;
+        return { date: addMonths(start, t.month), units, cumulativeUnits: cumulative };
+      });
+  }
 
   const cliff = Math.max(0, grant.cliff_months);
   const period = Math.max(1, grant.period_months);
